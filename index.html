@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Laporan Pengiriman — Booster & Nutritan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<style>
+  :root{
+    --bg: #101815;
+    --bg-elev: #17211D;
+    --card: #1C2721;
+    --card-hover: #223229;
+    --line: #2C3A33;
+    --text: #ECF1EC;
+    --text-mute: #8FA398;
+    --text-dim: #5E7268;
+    --booster: #6FCF7C;
+    --booster-dim: #3A5C40;
+    --nutritan: #F2A65A;
+    --nutritan-dim: #6B4D2C;
+    --ok: #4CAF6D;
+    --bad: #E2585A;
+    --warn: #E0B84C;
+    --neutral: #6B7680;
+    --radius: 14px;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    background: radial-gradient(ellipse 120% 80% at 50% -10%, #1A2620 0%, var(--bg) 55%);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+    padding: 32px 24px 80px;
+  }
+  .wrap{ max-width: 1180px; margin: 0 auto; }
+
+  /* ---------- Header ---------- */
+  header{
+    display:flex; justify-content:space-between; align-items:flex-end;
+    flex-wrap: wrap; gap: 20px;
+    margin-bottom: 28px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--line);
+  }
+  .brand-title{
+    font-family:'Space Grotesk', sans-serif;
+    font-weight:700;
+    font-size: 26px;
+    letter-spacing: -0.02em;
+  }
+  .brand-title span{ color: var(--text-mute); font-weight: 500; }
+  .subtitle{ color: var(--text-mute); font-size: 13px; margin-top: 6px; }
+
+  .filter-group{
+    display:flex; gap:6px; background: var(--bg-elev);
+    padding:4px; border-radius: 999px; border:1px solid var(--line);
+  }
+  .filter-btn{
+    border:none; background:transparent; color: var(--text-mute);
+    font-family:'Inter'; font-size:13px; font-weight:600;
+    padding:8px 16px; border-radius:999px; cursor:pointer;
+    transition: all .18s ease;
+  }
+  .filter-btn.active[data-brand="ALL"]{ background:#3B4A42; color:var(--text); }
+  .filter-btn.active[data-brand="B"]{ background: var(--booster); color:#0E1810; }
+  .filter-btn.active[data-brand="N"]{ background: var(--nutritan); color:#241605; }
+
+  /* ---------- Breadcrumb ---------- */
+  .crumbs{
+    display:flex; align-items:center; gap:8px;
+    font-size:13px; color: var(--text-mute);
+    margin-bottom: 22px; font-weight:500;
+  }
+  .crumbs .seg{ cursor:pointer; padding:5px 10px; border-radius:8px; transition: background .15s; }
+  .crumbs .seg:hover{ background: var(--bg-elev); color: var(--text); }
+  .crumbs .seg.current{ color: var(--text); background: var(--card); border:1px solid var(--line); }
+  .crumbs .sep{ color: var(--text-dim); }
+
+  /* ---------- KPI cards ---------- */
+  .kpi-row{
+    display:grid; grid-template-columns: repeat(5, 1fr); gap:14px;
+    margin-bottom: 26px;
+  }
+  .kpi{
+    background: var(--card); border:1px solid var(--line); border-radius: var(--radius);
+    padding: 18px 18px 16px;
+    position:relative; overflow:hidden;
+  }
+  .kpi .label{ font-size:11.5px; color:var(--text-mute); font-weight:600; text-transform:uppercase; letter-spacing:.04em; }
+  .kpi .value{ font-family:'JetBrains Mono'; font-size:22px; font-weight:600; margin-top:8px; letter-spacing:-0.01em; }
+  .kpi .sub{ font-size:11.5px; color: var(--text-dim); margin-top:4px; font-family:'JetBrains Mono'; }
+  .kpi.margin .value{ color: var(--booster); }
+  .kpi.delivered .value{ color: var(--ok); }
+  .kpi.retur .value{ color: var(--bad); }
+
+  /* ---------- bottle gauge signature ---------- */
+  .gauge-row{
+    display:grid; grid-template-columns: 1fr 1fr; gap:14px;
+    margin-bottom: 26px;
+  }
+  .gauge-card{
+    background: var(--card); border:1px solid var(--line); border-radius: var(--radius);
+    padding: 20px 22px; display:flex; align-items:center; gap:20px;
+  }
+  .gauge-card.booster{ border-color: var(--booster-dim); }
+  .gauge-card.nutritan{ border-color: var(--nutritan-dim); }
+  .bottle{ width:34px; height:64px; border:2px solid var(--line); border-radius: 6px 6px 10px 10px;
+    position:relative; flex-shrink:0; background: #0E1712; overflow:hidden; }
+  .bottle::before{ content:''; position:absolute; top:-8px; left:50%; transform:translateX(-50%);
+    width:12px; height:8px; background:var(--line); border-radius:2px 2px 0 0; }
+  .bottle .fill{ position:absolute; bottom:0; left:0; width:100%; transition: height .6s cubic-bezier(.4,0,.2,1); }
+  .gauge-card.booster .fill{ background: linear-gradient(180deg, #8FE39B, var(--booster)); }
+  .gauge-card.nutritan .fill{ background: linear-gradient(180deg, #F7C084, var(--nutritan)); }
+  .gauge-info{ flex:1; }
+  .gauge-info .name{ font-family:'Space Grotesk'; font-weight:600; font-size:15px; }
+  .gauge-card.booster .name{ color: var(--booster); }
+  .gauge-card.nutritan .name{ color: var(--nutritan); }
+  .gauge-info .pct{ font-family:'JetBrains Mono'; font-size:26px; font-weight:600; margin-top:2px; }
+  .gauge-info .desc{ font-size:11.5px; color: var(--text-mute); margin-top:2px; }
+
+  /* ---------- chart card ---------- */
+  .panel{
+    background: var(--card); border:1px solid var(--line); border-radius: var(--radius);
+    padding: 20px 22px; margin-bottom: 22px;
+  }
+  .panel-head{ display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; }
+  .panel-title{ font-family:'Space Grotesk'; font-weight:600; font-size:15px; }
+  .panel-title .accent{ color: var(--text-mute); font-weight:500; font-size:12.5px; }
+  .chart-wrap{ height: 260px; }
+
+  /* ---------- grid cards (year->month, month->day) ---------- */
+  .cards-grid{
+    display:grid; grid-template-columns: repeat(auto-fill, minmax(150px,1fr)); gap:12px;
+  }
+  .period-card{
+    background: var(--bg-elev); border:1px solid var(--line); border-radius:12px;
+    padding:14px 16px; cursor:pointer; transition: all .15s ease;
+    position:relative;
+  }
+  .period-card:hover{ background: var(--card-hover); border-color:#3B4A42; transform: translateY(-2px); }
+  .period-card .p-label{ font-family:'Space Grotesk'; font-weight:600; font-size:14px; }
+  .period-card .p-omset{ font-family:'JetBrains Mono'; font-size:15px; margin-top:8px; color: var(--text); }
+  .period-card .p-meta{ font-size:11px; color: var(--text-mute); margin-top:4px; }
+  .period-card .p-bar{ height:4px; border-radius:2px; background: var(--line); margin-top:10px; overflow:hidden; display:flex; }
+  .period-card .p-bar .b{ background: var(--booster); }
+  .period-card .p-bar .n{ background: var(--nutritan); }
+
+  /* ---------- daily table ---------- */
+  table{ width:100%; border-collapse:collapse; font-size:13px; }
+  thead th{
+    text-align:right; font-weight:600; color: var(--text-mute); font-size:11px;
+    text-transform:uppercase; letter-spacing:.03em; padding: 8px 10px; border-bottom:1px solid var(--line);
+  }
+  thead th:first-child, tbody td:first-child{ text-align:left; }
+  tbody td{ padding:10px 10px; text-align:right; font-family:'JetBrains Mono'; font-size:12.5px; border-bottom:1px solid #1F2B25; }
+  tbody tr:hover{ background: var(--bg-elev); }
+  .tag{ display:inline-block; padding:2px 8px; border-radius:6px; font-size:10.5px; font-weight:700; font-family:'Inter'; }
+  .tag.b{ background: var(--booster-dim); color: var(--booster); }
+  .tag.n{ background: var(--nutritan-dim); color: var(--nutritan); }
+
+  .empty{ text-align:center; padding:40px; color: var(--text-dim); font-size:13px; }
+
+  @media (max-width: 880px){
+    .kpi-row{ grid-template-columns: repeat(2,1fr); }
+    .gauge-row{ grid-template-columns: 1fr; }
+  }
+  @media (max-width: 520px){
+    .kpi-row{ grid-template-columns: 1fr 1fr; }
+    header{ flex-direction:column; align-items:flex-start; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div>
+      <div class="brand-title">Laporan Pengiriman <span>· Booster & Nutritan</span></div>
+      <div class="subtitle" id="dateRangeLabel">Data historis — akan tersambung ke Google Sheets via Apps Script</div>
+    </div>
+    <div class="filter-group" id="brandFilter">
+      <button class="filter-btn active" data-brand="ALL">Semua</button>
+      <button class="filter-btn" data-brand="B">Booster</button>
+      <button class="filter-btn" data-brand="N">Nutritan</button>
+    </div>
+  </header>
+
+  <div class="crumbs" id="crumbs"></div>
+
+  <div class="kpi-row" id="kpiRow"></div>
+
+  <div class="gauge-row" id="gaugeRow"></div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <div class="panel-title">Tren Omset <span class="accent" id="chartSub">per bulan</span></div>
+    </div>
+    <div class="chart-wrap"><canvas id="trendChart"></canvas></div>
+  </div>
+
+  <div class="panel" id="drillPanel">
+    <div class="panel-head">
+      <div class="panel-title" id="drillTitle">Pilih bulan</div>
+    </div>
+    <div id="drillBody"></div>
+  </div>
+
+</div>
+
+<script>
+const RAW_DAILY = {"2026-03-01": {"B": {"qty": 46.0, "omset": 3916382.0, "eksp": 1042618.0, "hpp": 0.0, "codtf": 4959000.0, "delivered": 35, "retur": 6, "ongoing": 0, "hilang": 0}, "N": {"qty": 0, "omset": 0, "eksp": 0, "hpp": 0, "codtf": 0, "delivered": 0, "retur": 0, "ongoing": 0, "hilang": 0}}, "2026-03-02": {"B": {"qty": 62.0, "omset": 5319012.0, "eksp": 1551988.0, "hpp": 0.0, "codtf": 6871000.0, "delivered": 44, "retur": 9, "ongoing": 0, "hilang": 0}, "N": {"qty": 0, "omset": 0, "eksp": 0, "hpp": 0, "codtf": 0, "delivered": 0, "retur": 0, "ongoing": 0, "hilang": 0}}, "2026-03-03": {"B": {"qty": 42.0, "omset": 3615364.0, "eksp": 1025636.0, "hpp": 0.0, "codtf": 4641000.0, "delivered": 30, "retur": 7, "ongoing": 0, "hilang": 0}, "N": {"qty": 0, "omset": 0, "eksp": 0, "hpp": 0, "codtf": 0, "delivered": 0, "retur": 0, "ongoing": 0, "hilang": 0}}, "2026-03-04": {"B": {"qty": 48.0, "omset": 4214857.0, "eksp": 1351143.0, "hpp": 0.0, "codtf": 5566000.0, "delivered": 36, "retur": 10, "ongoing": 0, "hilang": 0}, "N": {"qty": 0, "omset": 0, "eksp": 0, "hpp": 0, "codtf": 0, "delivered": 0, "retur": 0, "ongoing": 0, "hilang": 0}}, "2026-03-05": {"B": {"qty": 42.0, "omset": 3650118.0, "eksp": 1037882.0, "hpp": 0.0, "codtf": 4688000.0, "delivered": 34, "retur": 5, "ongoing": 0, "hilang": 0}, "N": {"qty": 0, "omset": 0, "eksp": 0, "hpp": 0, "codtf": 0, "delivered": 0, "retur": 0, "ongoing": 0, "hilang": 0}}, "2026-03-06": {"B": {"qty": 32.0, "omset": 2803802.0, "eksp": 961198.0, "hpp": 0.0, "codtf": 3765000.0, "delivered": 24, "retur": 7, "ongoing": 0, "hilang": 0}, "N": {"qty": 0, "omset": 0, "eksp": 0, "hpp": 0, "codtf": 0, "delivered": 0, "retur": 0, "ongoing": 0, "hilang": 0}}, "2026-03-07": {"B": {"qty": 50.0, "omset": 4347403.0, "eksp": 1556597.0, "hpp": 0.0, "codtf": 5904000.0, "delivered": 36, "retur": 7, "ongoing": 0, "hilang": 0}, "N": {"qty": 0, "omset": 0, "eksp": 0, "hpp": 0, "codtf": 0, "delivered": 0, "retur": 0, "ongoing": 0, "hilang": 0}}, "2026-03-08": {"B": {"qty": 34.0, "omset": 2854890.0, "eksp": 883110.0, "hpp": 0.0, "codtf": 3738000.0, "delivered": 27, "retur": 3, "ongoing": 0, "hilang": 0}, "N": {"qty": 0, "omset": 0, "eksp": 0, "hpp": 0, "codtf": 0, "delivered": 0, "retur": 0, "ongoing": 0, "hilang": 0}}, "2026-03-09": {"B": {"qty": 47.0, "omset": 4035132.0, "eksp": 1265868.0, "hpp": 0.0, "codtf": 5301000.0, "delivered": 37, "retur": 5, "ongoing": 0, "hilang": 0}, "N": {"qty": 0, "omset": 0, "eksp": 0, "hpp": 0, "codtf": 0, "delivered": 0, "retur": 0, "ongoing": 0, "hilang": 0}}, "2026-03-10": {"B": {"qty": 42.0, "omset": 3617277.0, "eksp": 1218723.0, "hpp": 0.0, "codtf": 4836000.0, "delivered": 29, "retur": 7, "ongoing": 0, "hilang": 0}, "N": {"qty": 0, "omset": 0, "eksp": 0, "hpp": 0, "codtf": 0, "delivered": 0, "retur": 0, "ongoing": 0, "hilang": 0}}, "2026-03-11": {"B": {"qty": 50.0, "omset": 4341813.0, "eksp": 1297187.0, "hpp": 0.0, "codtf": 5639000.0, "delivered": 39, "retur": 5, "ongoing": 0, "hilang": 0}, "N": {"qty": 1.0, "omset": 89052.0, "eksp": 10948.0, "hpp": 0.0, "codtf": 100000.0, "delivered": 1, "retur": 0, "ongoing": 0, "hilang": 0}}, "2026-03-12": {"B": {"qty": 43.0, "omset": 3740947.0, "eksp": 1273053.0, "hpp": 0.0, "codtf": 5014000.0, "delivered": 35, "retur": 6, "ongoing": 0, "hilang": 0}, "N": {"qty": 0, "omset": 0, "eksp": 0, "hpp": 0, "codtf": 0, "delivered": 0, "retur": 0, "ongoing": 0, "hilang": 0}}, "2026-03-13": {"B": {"qty": 39.0, "omset": 3392180.0, "eksp": 1127820.0, "hpp": 0.0, "codtf": 4520000.0, "delivered": 31, "retur": 4, "ongoing": 0, "hilang": 0}, "N": {"qty": 0, "omset": 0, "eksp": 0, "hpp": 0, "codtf": 0, "delivered": 0, "retur": 0, "ongoing": 0, "hilang": 0}}, "2026-03-24": {"B": {"qty": 3.0, "omset": 256806.0, "eksp": 43194.0, "hpp": 0.0, "codtf": 300000.0, "delivered": 3, "retur": 0, "ongoing": 0, "hilang": 0}, "N": {"qty": 0, "omset": 0, "eksp": 0, "hpp": 0, "codtf": 0, "delivered": 0, "retur": 0, "ongoing": 0, "hilang": 0}}, "2026-03-25": {"B": {"qty": 88.0, "omset": 7729650.0, "eksp": 2385350.0, "hpp": 0.0, "codtf": 10115000.0, "delivered": 69, "retur": 15, "ongoing": 0, "hilang": 0}, "N": {"qty": 0, "omset": 0, "eksp": 0, "hpp": 0, "codtf": 0, "delivered": 0, "retur": 0, "ongoing": 0, "hilang": 0}}, "2026-03-26": {"B": {"qty": 74.0, "omset": 6470633.0, "eksp": 1888367.0, "hpp": 0.0, "codtf": 8359000.0, "delivered": 57, "retur": 10, "ongoing": 0, "hilang": 0}, "N": {"qty": 0, "omset": 0, "eksp": 0, "hpp": 0, "codtf": 0, "delivered": 0, "retur": 0, "ongoing": 0, "hilang": 0}}, "2026-03-27": {"B": {"qty": 80.0, "omset": 6951941.0, "eksp": 2302059.0, "hpp": 0.0, "codtf": 9254000.0, "delivered": 67, "retur": 6, "ongoing": 0, "hilang": 0}, "N": {"qty": 1.0, "omset": 86052.0, "eksp": 13948.0, "hpp": 0.0, "codtf": 100000.0, "delivered": 1, "retur": 0, "ongoing": 0, "hilang": 0}}, "2026-03-28": {"B": {"qty": 44.0, "omset": 3809361.0, "eksp": 1193639.0, "hpp": 0.0, "codtf": 5003000.0, "delivered": 27, "retur": 11, "ongoing": 0, "hilang": 0}, "N": {"qty": 0, "omset": 0, "eksp": 0, "hpp": 0, "codtf": 0, "delivered": 0, "retur": 0, "ongoing": 0, "hilang": 0}}, "2026-03-29": {"B": {"qty": 55.0, "omset": 4816518.0, "eksp": 1537482.0, "hpp": 0.0, "codtf": 6354000.0, "delivered": 42, "retur": 8, "ongoing": 0, "hilang": 0}, "N": {"qty": 0, "omset": 0, "eksp": 0, "hpp": 0, "codtf": 0, "delivered": 0, "retur": 0, "ongoing": 0, "hilang": 0}}, "2026-03-30": {"B": {"qty": 50.0, "omset": 4338625.0, "eksp": 1315375.0, "hpp": 0.0, "codtf": 5654000.0, "delivered": 38, "retur": 7, "ongoing": 0, "hilang": 0}, "N": {"qty": 0, "omset": 0, "eksp": 0, "hpp": 0, "codtf": 0, "delivered": 0, "retur": 0, "ongoing": 0, "hilang": 0}}, "2026-03-31": {"B": {"qty": 52.0, "omset": 4528826.0, "eksp": 1369174.0, "hpp": 0.0, "codtf": 5898000.0, "delivered": 39, "retur": 9, "ongoing": 0, "hilang": 0}, "N": {"qty": 1.0, "omset": 85002.0, "eksp": 14998.0, "hpp": 0.0, "codtf": 100000.0, "delivered": 1, "retur": 0, "ongoing": 0, "hilang": 0}}, "2026-04-01": {"B": {"qty": 44.0, "omset": 3846410.0, "eksp": 1151590.0, "hpp": 0.0, "codtf": 4998000.0, "delivered": 31, "retur": 9, "ongoing": 0, "hilang": 0}, "N": {"qty": 0, "omset": 0, "eksp": 0, "hpp": 0, "codtf": 0, "delivered": 0, "retur": 0, "ongoing": 0, "hilang": 0}}, "2026-04-02": {"B": {"qty": 45.0, "omset": 3947354.0, "eksp": 1232646.0, "hpp": 0.0, "codtf": 5180000.0, "delivered": 34, "retur": 8, "ongoing": 0, "hilang": 0}, "N": {"qty": 0, "omset": 0, "eksp": 0, "hpp": 0, "codtf": 0, "delivered": 0, "retur": 0, "ongoing": 0, "hilang": 0}}, "2026-04-03": {"B": {"qty": 40.0, "omset": 3488125.0, "eksp": 1013875.0, "hpp": 0.0, "codtf": 4502000.0, "delivered": 30, "retur": 5, "ongoing": 0, "hilang": 0}, "N": {"qty": 92.0, "omset": 8175852.0, "eksp": 2259148.0, "hpp": 0.0, "codtf": 10435000.0, "delivered": 70, "retur": 12, "ongoing": 0, "hilang": 0}}, "2026-04-04": {"B": {"qty": 26.0, "omset": 2274113.0, "eksp": 724887.0, "hpp": 0.0, "codtf": 2999000.0, "delivered": 21, "retur": 3, "ongoing": 0, "hilang": 0}, "N": {"qty": 23.0, "omset": 2089549.0, "eksp": 569451.0, "hpp": 0.0, "codtf": 2659000.0, "delivered": 15, "retur": 7, "ongoing": 0, "hilang": 0}}, "2026-04-05": {"B": {"qty": 34.0, "omset": 2925980.0, "eksp": 798020.0, "hpp": 0.0, "codtf": 3724000.0, "delivered": 26, "retur": 4, "ongoing": 0, "hilang": 0}, "N": {"qty": 38.0, "omset": 3380001.0, "eksp": 944999.0, "hpp": 0.0, "codtf": 4325000.0, "delivered": 27, "retur": 7, "ongoing": 0, "hilang": 0}}, "2026-04-06": {"B": {"qty": 35.0, "omset": 3035562.0, "eksp": 1164438.0, "hpp": 0.0, "codtf": 4200000.0, "delivered": 23, "retur": 8, "ongoing": 0, "hilang": 0}, "N": {"qty": 40.0, "omset": 3600027.0, "eksp": 982973.0, "hpp": 0.0, "codtf": 4583000.0, "delivered": 25, "retur": 9, "ongoing": 0, "hilang": 0}}, "2026-04-07": {"B": {"qty": 40.0, "omset": 3438190.0, "eksp": 1039810.0, "hpp": 0.0, "codtf": 4478000.0, "delivered": 22, "retur": 13, "ongoing": 0, "hilang": 0}, "N": {"qty": 39.0, "omset": 3350341.0, "eksp": 1190207.0, "hpp": 0.0, "codtf": 4540548.0, "delivered": 24, "retur": 12, "ongoing": 0, "hilang": 1}}, "2026-04-08": {"B": {"qty": 29.0, "omset": 2519827.0, "eksp": 847173.0, "hpp": 0.0, "codtf": 3367000.0, "delivered": 19, "retur": 7, "ongoing": 0, "hilang": 0}, "N": {"qty": 45.0, "omset": 4020035.0, "eksp": 1021965.0, "hpp": 0.0, "codtf": 5042000.0, "delivered": 31, "retur": 8, "ongoing": 0, "hilang": 0}}, "2026-04-09": {"B": {"qty": 33.0, "omset": 2863020.0, "eksp": 952980.0, "hpp": 0.0, "codtf": 3816000.0, "delivered": 25, "retur": 5, "ongoing": 0, "hilang": 0}, "N": {"qty": 47.0, "omset": 3849020.0, "eksp": 1125980.0, "hpp": 0.0, "codtf": 4975000.0, "delivered": 33, "retur": 10, "ongoing": 0, "hilang": 0}}, "2026-04-10": {"B": {"qty": 22.0, "omset": 1898995.0, "eksp": 655005.0, "hpp": 0.0, "codtf": 2554000.0, "delivered": 18, "retur": 2, "ongoing": 0, "hilang": 0}, "N": {"qty": 43.0, "omset": 3699949.0, "eksp": 1235499.0, "hpp": 0.0, "codtf": 4935448.0, "delivered": 36, "retur": 6, "ongoing": 0, "hilang": 0}}, "2026-04-11": {"B": {"qty": 23.0, "omset": 1996257.0, "eksp": 581743.0, "hpp": 0.0, "codtf": 2578000.0, "delivered": 17, "retur": 4, "ongoing": 0, "hilang": 0}, "N": {"qty": 33.0, "omset": 2982778.0, "eksp": 956222.0, "hpp": 0.0, "codtf": 3939000.0, "delivered": 24, "retur": 8, "ongoing": 0, "hilang": 0}}, "2026-04-12": {"B": {"qty": 21.0, "omset": 1846608.0, "eksp": 470392.0, "hpp": 0.0, "codtf": 2317000.0, "delivered": 17, "retur": 2, "ongoing": 0, "hilang": 0}, "N": {"qty": 40.0, "omset": 3508470.0, "eksp": 1057530.0, "hpp": 0.0, "codtf": 4566000.0, "delivered": 31, "retur": 5, "ongoing": 0, "hilang": 0}}, "2026-04-13": {"B": {"qty": 24.0, "omset": 2073544.0, "eksp": 654456.0, "hpp": 0.0, "codtf": 2728000.0, "delivered": 18, "retur": 4, "ongoing": 0, "hilang": 0}, "N": {"qty": 32.0, "omset": 2748744.0, "eksp": 943256.0, "hpp": 0.0, "codtf": 3692000.0, "delivered": 24, "retur": 7, "ongoing": 0, "hilang": 0}}, "2026-04-14": {"B": {"qty": 24.0, "omset": 2246525.0, "eksp": 498475.0, "hpp": 0.0, "codtf": 2745000.0, "delivered": 17, "retur": 3, "ongoing": 0, "hilang": 0}, "N": {"qty": 43.0, "omset": 3940331.0, "eksp": 1060669.0, "hpp": 0.0, "codtf": 5001000.0, "delivered": 37, "retur": 4, "ongoing": 0, "hilang": 0}}, "2026-04-15": {"B": {"qty": 44.0, "omset": 4094211.0, "eksp": 1093789.0, "hpp": 0.0, "codtf": 5188000.0, "delivered": 26, "retur": 12, "ongoing": 0, "hilang": 0}, "N": {"qty": 49.0, "omset": 4564289.0, "eksp": 1042711.0, "hpp": 0.0, "codtf": 5607000.0, "delivered": 41, "retur": 5, "ongoing": 0, "hilang": 0}}, "2026-04-16": {"B": {"qty": 23.0, "omset": 2182349.0, "eksp": 673651.0, "hpp": 0.0, "codtf": 2856000.0, "delivered": 17, "retur": 5, "ongoing": 0, "hilang": 0}, "N": {"qty": 52.0, "omset": 4862079.0, "eksp": 1317921.0, "hpp": 0.0, "codtf": 6180000.0, "delivered": 40, "retur": 8, "ongoing": 0, "hilang": 0}}, "2026-04-17": {"B": {"qty": 33.0, "omset": 2987461.0, "eksp": 671539.0, "hpp": 0.0, "codtf": 3659000.0, "delivered": 26, "retur": 3, "ongoing": 0, "hilang": 0}, "N": {"qty": 65.0, "omset": 6118030.0, "eksp": 1641970.0, "hpp": 0.0, "codtf": 7760000.0, "delivered": 50, "retur": 12, "ongoing": 0, "hilang": 0}}, "2026-04-18": {"B": {"qty": 26.0, "omset": 2383103.0, "eksp": 566897.0, "hpp": 0.0, "codtf": 2950000.0, "delivered": 19, "retur": 4, "ongoing": 0, "hilang": 0}, "N": {"qty": 30.0, "omset": 2740000.0, "eksp": 530000.0, "hpp": 0.0, "codtf": 3270000.0, "delivered": 26, "retur": 3, "ongoing": 0, "hilang": 0}}, "2026-04-19": {"B": {"qty": 17.0, "omset": 1575790.0, "eksp": 366210.0, "hpp": 0.0, "codtf": 1942000.0, "delivered": 14, "retur": 1, "ongoing": 0, "hilang": 0}, "N": {"qty": 45.0, "omset": 4129120.0, "eksp": 922880.0, "hpp": 0.0, "codtf": 5052000.0, "delivered": 38, "retur": 5, "ongoing": 0, "hilang": 0}}, "2026-04-20": {"B": {"qty": 37.0, "omset": 3434928.0, "eksp": 931072.0, "hpp": 0.0, "codtf": 4366000.0, "delivered": 29, "retur": 5, "ongoing": 0, "hilang": 0}, "N": {"qty": 56.0, "omset": 5142557.0, "eksp": 1180443.0, "hpp": 0.0, "codtf": 6323000.0, "delivered": 43, "retur": 9, "ongoing": 0, "hilang": 0}}, "2026-04-21": {"B": {"qty": 31.0, "omset": 2816669.0, "eksp": 740331.0, "hpp": 0.0, "codtf": 3557000.0, "delivered": 20, "retur": 7, "ongoing": 0, "hilang": 0}, "N": {"qty": 47.0, "omset": 4300369.0, "eksp": 928631.0, "hpp": 0.0, "codtf": 5229000.0, "delivered": 37, "retur": 4, "ongoing": 0, "hilang": 0}}, "2026-04-22": {"B": {"qty": 32.0, "omset": 2944493.0, "eksp": 715507.0, "hpp": 0.0, "codtf": 3660000.0, "delivered": 24, "retur": 4, "ongoing": 0, "hilang": 0}, "N": {"qty": 35.0, "omset": 3240510.0, "eksp": 750490.0, "hpp": 0.0, "codtf": 3991000.0, "delivered": 29, "retur": 5, "ongoing": 0, "hilang": 0}}, "2026-04-23": {"B": {"qty": 20.0, "omset": 1860548.0, "eksp": 542452.0, "hpp": 0.0, "codtf": 2403000.0, "delivered": 16, "retur": 3, "ongoing": 0, "hilang": 0}, "N": {"qty": 39.0, "omset": 3564808.0, "eksp": 1032192.0, "hpp": 0.0, "codtf": 4597000.0, "delivered": 28, "retur": 9, "ongoing": 0, "hilang": 0}}, "2026-04-24": {"B": {"qty": 32.0, "omset": 2945158.0, "eksp": 806842.0, "hpp": 0.0, "codtf": 3752000.0, "delivered": 26, "retur": 3, "ongoing": 0, "hilang": 0}, "N": {"qty": 35.0, "omset": 3245520.0, "eksp": 799480.0, "hpp": 0.0, "codtf": 4045000.0, "delivered": 31, "retur": 3, "ongoing": 0, "hilang": 0}}, "2026-04-25": {"B": {"qty": 26.0, "omset": 2372574.0, "eksp": 525426.0, "hpp": 0.0, "codtf": 2898000.0, "delivered": 21, "retur": 1, "ongoing": 0, "hilang": 0}, "N": {"qty": 45.0, "omset": 4124775.0, "eksp": 849225.0, "hpp": 0.0, "codtf": 4974000.0, "delivered": 29, "retur": 11, "ongoing": 0, "hilang": 0}}, "2026-04-26": {"B": {"qty": 22.0, "omset": 2043407.0, "eksp": 541593.0, "hpp": 0.0, "codtf": 2585000.0, "delivered": 18, "retur": 3, "ongoing": 0, "hilang": 0}, "N": {"qty": 47.0, "omset": 4310850.0, "eksp": 1152150.0, "hpp": 0.0, "codtf": 5463000.0, "delivered": 39, "retur": 5, "ongoing": 0, "hilang": 0}}, "2026-04-27": {"B": {"qty": 19.0, "omset": 1787241.0, "eksp": 457759.0, "hpp": 0.0, "codtf": 2245000.0, "delivered": 12, "retur": 6, "ongoing": 0, "hilang": 0}, "N": {"qty": 34.0, "omset": 3196133.0, "eksp": 774867.0, "hpp": 0.0, "codtf": 3971000.0, "delivered": 29, "retur": 5, "ongoing": 0, "hilang": 0}}, "2026-04-28": {"B": {"qty": 25.0, "omset": 2304920.0, "eksp": 574080.0, "hpp": 0.0, "codtf": 2879000.0, "delivered": 20, "retur": 1, "ongoing": 0, "hilang": 0}, "N": {"qty": 39.0, "omset": 3689640.0, "eksp": 949360.0, "hpp": 0.0, "codtf": 4639000.0, "delivered": 29, "retur": 7, "ongoing": 0, "hilang": 0}}, "2026-04-29": {"B": {"qty": 30.0, "omset": 2796879.0, "eksp": 620121.0, "hpp": 0.0, "codtf": 3417000.0, "delivered": 24, "retur": 3, "ongoing": 0, "hilang": 0}, "N": {"qty": 34.0, "omset": 3082296.0, "eksp": 699704.0, "hpp": 0.0, "codtf": 3782000.0, "delivered": 26, "retur": 3, "ongoing": 0, "hilang": 1}}, "2026-04-30": {"B": {"qty": 19.0, "omset": 1781583.0, "eksp": 376417.0, "hpp": 0.0, "codtf": 2158000.0, "delivered": 14, "retur": 5, "ongoing": 0, "hilang": 0}, "N": {"qty": 31.0, "omset": 2897442.0, "eksp": 684558.0, "hpp": 0.0, "codtf": 3582000.0, "delivered": 26, "retur": 3, "ongoing": 0, "hilang": 0}}, "2026-05-01": {"B": {"qty": 22.0, "omset": 2004655.0, "eksp": 509345.0, "hpp": 0.0, "codtf": 2514000.0, "delivered": 15, "retur": 5, "ongoing": 0, "hilang": 0}, "N": {"qty": 6.0, "omset": 544912.0, "eksp": 125088.0, "hpp": 0.0, "codtf": 670000.0, "delivered": 5, "retur": 1, "ongoing": 0, "hilang": 0}}, "2026-05-02": {"B": {"qty": 25.0, "omset": 2372791.0, "eksp": 553209.0, "hpp": 0.0, "codtf": 2926000.0, "delivered": 21, "retur": 2, "ongoing": 0, "hilang": 0}, "N": {"qty": 8.0, "omset": 932306.0, "eksp": 141694.0, "hpp": 0.0, "codtf": 1074000.0, "delivered": 4, "retur": 3, "ongoing": 0, "hilang": 0}}, "2026-05-03": {"B": {"qty": 34.0, "omset": 3223264.0, "eksp": 625736.0, "hpp": 0.0, "codtf": 3849000.0, "delivered": 25, "retur": 3, "ongoing": 0, "hilang": 0}, "N": {"qty": 12.0, "omset": 1279404.0, "eksp": 242596.0, "hpp": 0.0, "codtf": 1522000.0, "delivered": 11, "retur": 1, "ongoing": 0, "hilang": 0}}, "2026-05-04": {"B": {"qty": 40.0, "omset": 3682555.0, "eksp": 831445.0, "hpp": 0.0, "codtf": 4514000.0, "delivered": 27, "retur": 8, "ongoing": 0, "hilang": 0}, "N": {"qty": 14.0, "omset": 1612098.0, "eksp": 300902.0, "hpp": 0.0, "codtf": 1913000.0, "delivered": 10, "retur": 1, "ongoing": 0, "hilang": 0}}, "2026-05-05": {"B": {"qty": 30.0, "omset": 2769158.0, "eksp": 819842.0, "hpp": 0.0, "codtf": 3589000.0, "delivered": 24, "retur": 5, "ongoing": 0, "hilang": 0}, "N": {"qty": 29.0, "omset": 3221918.0, "eksp": 526082.0, "hpp": 0.0, "codtf": 3748000.0, "delivered": 25, "retur": 2, "ongoing": 0, "hilang": 0}}, "2026-05-06": {"B": {"qty": 26.0, "omset": 2411540.0, "eksp": 588460.0, "hpp": 0.0, "codtf": 3000000.0, "delivered": 22, "retur": 3, "ongoing": 0, "hilang": 0}, "N": {"qty": 21.0, "omset": 2311782.0, "eksp": 449218.0, "hpp": 0.0, "codtf": 2761000.0, "delivered": 15, "retur": 5, "ongoing": 0, "hilang": 0}}, "2026-05-08": {"B": {"qty": 47.0, "omset": 4348858.0, "eksp": 1122142.0, "hpp": 0.0, "codtf": 5471000.0, "delivered": 39, "retur": 5, "ongoing": 0, "hilang": 0}, "N": {"qty": 20.0, "omset": 2108697.0, "eksp": 395303.0, "hpp": 0.0, "codtf": 2504000.0, "delivered": 16, "retur": 4, "ongoing": 0, "hilang": 0}}, "2026-05-09": {"B": {"qty": 38.0, "omset": 3548910.0, "eksp": 909090.0, "hpp": 0.0, "codtf": 4458000.0, "delivered": 29, "retur": 6, "ongoing": 0, "hilang": 0}, "N": {"qty": 23.0, "omset": 2628354.0, "eksp": 528646.0, "hpp": 0.0, "codtf": 3157000.0, "delivered": 20, "retur": 3, "ongoing": 0, "hilang": 0}}, "2026-05-10": {"B": {"qty": 32.0, "omset": 2995667.0, "eksp": 680333.0, "hpp": 0.0, "codtf": 3676000.0, "delivered": 24, "retur": 7, "ongoing": 0, "hilang": 0}, "N": {"qty": 24.0, "omset": 2563763.0, "eksp": 573237.0, "hpp": 0.0, "codtf": 3137000.0, "delivered": 18, "retur": 5, "ongoing": 0, "hilang": 0}}, "2026-05-11": {"B": {"qty": 43.0, "omset": 3961904.0, "eksp": 840096.0, "hpp": 0.0, "codtf": 4802000.0, "delivered": 28, "retur": 5, "ongoing": 0, "hilang": 0}, "N": {"qty": 30.0, "omset": 3182495.0, "eksp": 661505.0, "hpp": 0.0, "codtf": 3844000.0, "delivered": 23, "retur": 4, "ongoing": 1, "hilang": 0}}, "2026-05-12": {"B": {"qty": 31.0, "omset": 2944982.0, "eksp": 658018.0, "hpp": 0.0, "codtf": 3603000.0, "delivered": 26, "retur": 5, "ongoing": 0, "hilang": 0}, "N": {"qty": 33.0, "omset": 3530166.0, "eksp": 618834.0, "hpp": 0.0, "codtf": 4149000.0, "delivered": 24, "retur": 6, "ongoing": 0, "hilang": 0}}, "2026-05-13": {"B": {"qty": 29.0, "omset": 2733862.0, "eksp": 607138.0, "hpp": 0.0, "codtf": 3341000.0, "delivered": 25, "retur": 1, "ongoing": 0, "hilang": 0}, "N": {"qty": 37.0, "omset": 4198297.0, "eksp": 875703.0, "hpp": 0.0, "codtf": 5074000.0, "delivered": 28, "retur": 7, "ongoing": 0, "hilang": 0}}, "2026-05-14": {"B": {"qty": 38.0, "omset": 3514500.0, "eksp": 859500.0, "hpp": 0.0, "codtf": 4374000.0, "delivered": 27, "retur": 8, "ongoing": 0, "hilang": 0}, "N": {"qty": 19.0, "omset": 2171588.0, "eksp": 432412.0, "hpp": 0.0, "codtf": 2604000.0, "delivered": 14, "retur": 4, "ongoing": 0, "hilang": 0}}, "2026-05-15": {"B": {"qty": 41.0, "omset": 3691632.0, "eksp": 1013801.0, "hpp": 0.0, "codtf": 4705433.0, "delivered": 31, "retur": 6, "ongoing": 0, "hilang": 0}, "N": {"qty": 29.0, "omset": 3289591.0, "eksp": 706409.0, "hpp": 0.0, "codtf": 3996000.0, "delivered": 25, "retur": 4, "ongoing": 0, "hilang": 0}}, "2026-05-16": {"B": {"qty": 52.0, "omset": 4797043.0, "eksp": 1093957.0, "hpp": 0.0, "codtf": 5891000.0, "delivered": 38, "retur": 6, "ongoing": 0, "hilang": 0}, "N": {"qty": 16.0, "omset": 1759302.0, "eksp": 398698.0, "hpp": 0.0, "codtf": 2158000.0, "delivered": 13, "retur": 2, "ongoing": 0, "hilang": 0}}, "2026-05-17": {"B": {"qty": 31.0, "omset": 2906655.0, "eksp": 679345.0, "hpp": 0.0, "codtf": 3586000.0, "delivered": 26, "retur": 4, "ongoing": 0, "hilang": 0}, "N": {"qty": 13.0, "omset": 1507796.0, "eksp": 308204.0, "hpp": 0.0, "codtf": 1816000.0, "delivered": 12, "retur": 1, "ongoing": 0, "hilang": 0}}, "2026-05-18": {"B": {"qty": 43.0, "omset": 3943357.0, "eksp": 921643.0, "hpp": 0.0, "codtf": 4865000.0, "delivered": 29, "retur": 6, "ongoing": 0, "hilang": 0}, "N": {"qty": 27.0, "omset": 3062272.0, "eksp": 581728.0, "hpp": 0.0, "codtf": 3644000.0, "delivered": 23, "retur": 3, "ongoing": 0, "hilang": 0}}, "2026-05-19": {"B": {"qty": 51.0, "omset": 4660156.0, "eksp": 1176844.0, "hpp": 0.0, "codtf": 5837000.0, "delivered": 38, "retur": 6, "ongoing": 0, "hilang": 0}, "N": {"qty": 24.0, "omset": 2787313.0, "eksp": 556687.0, "hpp": 0.0, "codtf": 3344000.0, "delivered": 20, "retur": 3, "ongoing": 0, "hilang": 0}}, "2026-05-20": {"B": {"qty": 36.0, "omset": 3346866.0, "eksp": 830134.0, "hpp": 0.0, "codtf": 4177000.0, "delivered": 32, "retur": 1, "ongoing": 0, "hilang": 0}, "N": {"qty": 23.0, "omset": 2665359.0, "eksp": 525641.0, "hpp": 0.0, "codtf": 3191000.0, "delivered": 15, "retur": 5, "ongoing": 0, "hilang": 0}}, "2026-05-21": {"B": {"qty": 39.0, "omset": 3614891.0, "eksp": 940109.0, "hpp": 0.0, "codtf": 4555000.0, "delivered": 33, "retur": 5, "ongoing": 0, "hilang": 0}, "N": {"qty": 20.0, "omset": 2201370.0, "eksp": 488630.0, "hpp": 0.0, "codtf": 2690000.0, "delivered": 16, "retur": 4, "ongoing": 0, "hilang": 0}}, "2026-05-22": {"B": {"qty": 45.0, "omset": 4148028.0, "eksp": 915972.0, "hpp": 0.0, "codtf": 5064000.0, "delivered": 28, "retur": 11, "ongoing": 0, "hilang": 0}, "N": {"qty": 15.0, "omset": 1727455.0, "eksp": 286545.0, "hpp": 0.0, "codtf": 2014000.0, "delivered": 13, "retur": 2, "ongoing": 0, "hilang": 0}}, "2026-05-23": {"B": {"qty": 32.0, "omset": 2982295.0, "eksp": 754705.0, "hpp": 0.0, "codtf": 3737000.0, "delivered": 29, "retur": 1, "ongoing": 0, "hilang": 0}, "N": {"qty": 22.0, "omset": 2580554.0, "eksp": 360446.0, "hpp": 0.0, "codtf": 2941000.0, "delivered": 17, "retur": 3, "ongoing": 0, "hilang": 0}}, "2026-05-24": {"B": {"qty": 34.0, "omset": 3213191.0, "eksp": 900809.0, "hpp": 0.0, "codtf": 4114000.0, "delivered": 27, "retur": 6, "ongoing": 0, "hilang": 0}, "N": {"qty": 20.0, "omset": 2274400.0, "eksp": 637600.0, "hpp": 0.0, "codtf": 2912000.0, "delivered": 15, "retur": 4, "ongoing": 0, "hilang": 0}}, "2026-05-25": {"B": {"qty": 38.0, "omset": 3413100.0, "eksp": 825900.0, "hpp": 0.0, "codtf": 4239000.0, "delivered": 28, "retur": 7, "ongoing": 0, "hilang": 0}, "N": {"qty": 23.0, "omset": 2485626.0, "eksp": 627374.0, "hpp": 0.0, "codtf": 3113000.0, "delivered": 17, "retur": 6, "ongoing": 0, "hilang": 0}}, "2026-05-26": {"B": {"qty": 26.0, "omset": 2325335.0, "eksp": 587665.0, "hpp": 0.0, "codtf": 2913000.0, "delivered": 22, "retur": 3, "ongoing": 0, "hilang": 0}, "N": {"qty": 18.0, "omset": 1937451.0, "eksp": 486549.0, "hpp": 0.0, "codtf": 2424000.0, "delivered": 14, "retur": 3, "ongoing": 0, "hilang": 0}}, "2026-05-27": {"B": {"qty": 38.0, "omset": 3321212.0, "eksp": 907788.0, "hpp": 0.0, "codtf": 4229000.0, "delivered": 25, "retur": 11, "ongoing": 0, "hilang": 0}, "N": {"qty": 18.0, "omset": 1924301.0, "eksp": 448699.0, "hpp": 0.0, "codtf": 2373000.0, "delivered": 16, "retur": 2, "ongoing": 0, "hilang": 0}}, "2026-05-28": {"B": {"qty": 40.0, "omset": 3481600.0, "eksp": 990400.0, "hpp": 0.0, "codtf": 4472000.0, "delivered": 29, "retur": 6, "ongoing": 0, "hilang": 0}, "N": {"qty": 19.0, "omset": 2036943.0, "eksp": 387057.0, "hpp": 0.0, "codtf": 2424000.0, "delivered": 15, "retur": 2, "ongoing": 0, "hilang": 0}}, "2026-05-29": {"B": {"qty": 31.0, "omset": 2761521.0, "eksp": 641479.0, "hpp": 0.0, "codtf": 3403000.0, "delivered": 20, "retur": 8, "ongoing": 0, "hilang": 0}, "N": {"qty": 19.0, "omset": 2026688.0, "eksp": 496312.0, "hpp": 0.0, "codtf": 2523000.0, "delivered": 19, "retur": 0, "ongoing": 0, "hilang": 0}}, "2026-05-30": {"B": {"qty": 27.0, "omset": 2426312.0, "eksp": 647688.0, "hpp": 0.0, "codtf": 3074000.0, "delivered": 18, "retur": 9, "ongoing": 0, "hilang": 0}, "N": {"qty": 16.0, "omset": 1714472.0, "eksp": 462528.0, "hpp": 0.0, "codtf": 2177000.0, "delivered": 13, "retur": 3, "ongoing": 0, "hilang": 0}}, "2026-05-31": {"B": {"qty": 42.0, "omset": 3558875.0, "eksp": 936125.0, "hpp": 0.0, "codtf": 4495000.0, "delivered": 26, "retur": 9, "ongoing": 0, "hilang": 0}, "N": {"qty": 18.0, "omset": 1979141.0, "eksp": 400859.0, "hpp": 0.0, "codtf": 2380000.0, "delivered": 16, "retur": 2, "ongoing": 0, "hilang": 0}}, "2026-06-01": {"B": {"qty": 44.0, "omset": 3939737.0, "eksp": 1034263.0, "hpp": 0.0, "codtf": 4974000.0, "delivered": 36, "retur": 4, "ongoing": 0, "hilang": 0}, "N": {"qty": 26.0, "omset": 2758502.0, "eksp": 515498.0, "hpp": 0.0, "codtf": 3274000.0, "delivered": 18, "retur": 7, "ongoing": 0, "hilang": 0}}, "2026-06-02": {"B": {"qty": 52.0, "omset": 4855521.0, "eksp": 974479.0, "hpp": 0.0, "codtf": 5830000.0, "delivered": 40, "retur": 8, "ongoing": 0, "hilang": 0}, "N": {"qty": 23.0, "omset": 2465211.0, "eksp": 588789.0, "hpp": 0.0, "codtf": 3054000.0, "delivered": 18, "retur": 3, "ongoing": 1, "hilang": 0}}, "2026-06-03": {"B": {"qty": 36.0, "omset": 3350789.0, "eksp": 665211.0, "hpp": 0.0, "codtf": 4016000.0, "delivered": 21, "retur": 11, "ongoing": 0, "hilang": 0}, "N": {"qty": 19.0, "omset": 2107978.0, "eksp": 425022.0, "hpp": 0.0, "codtf": 2533000.0, "delivered": 14, "retur": 4, "ongoing": 0, "hilang": 0}}, "2026-06-04": {"B": {"qty": 32.0, "omset": 3001076.0, "eksp": 544924.0, "hpp": 0.0, "codtf": 3546000.0, "delivered": 24, "retur": 5, "ongoing": 0, "hilang": 0}, "N": {"qty": 26.0, "omset": 2811567.0, "eksp": 659433.0, "hpp": 0.0, "codtf": 3471000.0, "delivered": 20, "retur": 3, "ongoing": 0, "hilang": 0}}, "2026-06-05": {"B": {"qty": 49.0, "omset": 4514717.0, "eksp": 958283.0, "hpp": 0.0, "codtf": 5473000.0, "delivered": 28, "retur": 13, "ongoing": 1, "hilang": 0}, "N": {"qty": 39.0, "omset": 4312913.0, "eksp": 742087.0, "hpp": 0.0, "codtf": 5055000.0, "delivered": 30, "retur": 4, "ongoing": 0, "hilang": 0}}, "2026-06-06": {"B": {"qty": 33.0, "omset": 3014429.0, "eksp": 785571.0, "hpp": 0.0, "codtf": 3800000.0, "delivered": 24, "retur": 8, "ongoing": 0, "hilang": 0}, "N": {"qty": 29.0, "omset": 3258358.0, "eksp": 704642.0, "hpp": 0.0, "codtf": 3963000.0, "delivered": 23, "retur": 4, "ongoing": 0, "hilang": 0}}, "2026-06-07": {"B": {"qty": 28.0, "omset": 2517630.0, "eksp": 786370.0, "hpp": 0.0, "codtf": 3304000.0, "delivered": 22, "retur": 3, "ongoing": 0, "hilang": 0}, "N": {"qty": 30.0, "omset": 3283120.0, "eksp": 618880.0, "hpp": 0.0, "codtf": 3902000.0, "delivered": 26, "retur": 2, "ongoing": 0, "hilang": 0}}, "2026-06-08": {"B": {"qty": 40.0, "omset": 3672146.0, "eksp": 958854.0, "hpp": 0.0, "codtf": 4631000.0, "delivered": 36, "retur": 2, "ongoing": 0, "hilang": 0}, "N": {"qty": 19.0, "omset": 2051813.0, "eksp": 385187.0, "hpp": 0.0, "codtf": 2437000.0, "delivered": 17, "retur": 1, "ongoing": 0, "hilang": 0}}, "2026-06-09": {"B": {"qty": 43.0, "omset": 3967668.0, "eksp": 1034332.0, "hpp": 0.0, "codtf": 5002000.0, "delivered": 28, "retur": 10, "ongoing": 0, "hilang": 1}, "N": {"qty": 22.0, "omset": 2494627.0, "eksp": 469373.0, "hpp": 0.0, "codtf": 2964000.0, "delivered": 19, "retur": 3, "ongoing": 0, "hilang": 0}}, "2026-06-10": {"B": {"qty": 47.0, "omset": 4259225.0, "eksp": 941775.0, "hpp": 0.0, "codtf": 5201000.0, "delivered": 31, "retur": 9, "ongoing": 0, "hilang": 0}, "N": {"qty": 31.0, "omset": 3409175.0, "eksp": 669825.0, "hpp": 0.0, "codtf": 4079000.0, "delivered": 28, "retur": 3, "ongoing": 0, "hilang": 0}}, "2026-06-11": {"B": {"qty": 37.0, "omset": 3402537.0, "eksp": 718463.0, "hpp": 0.0, "codtf": 4121000.0, "delivered": 24, "retur": 8, "ongoing": 0, "hilang": 0}, "N": {"qty": 37.0, "omset": 3961577.0, "eksp": 753423.0, "hpp": 0.0, "codtf": 4715000.0, "delivered": 23, "retur": 10, "ongoing": 0, "hilang": 0}}, "2026-06-12": {"B": {"qty": 27.0, "omset": 2558057.0, "eksp": 552943.0, "hpp": 0.0, "codtf": 3111000.0, "delivered": 21, "retur": 5, "ongoing": 0, "hilang": 0}, "N": {"qty": 21.0, "omset": 2288927.0, "eksp": 436073.0, "hpp": 0.0, "codtf": 2725000.0, "delivered": 19, "retur": 2, "ongoing": 0, "hilang": 0}}, "2026-06-13": {"B": {"qty": 24.0, "omset": 2222906.0, "eksp": 560094.0, "hpp": 0.0, "codtf": 2783000.0, "delivered": 18, "retur": 5, "ongoing": 0, "hilang": 0}, "N": {"qty": 18.0, "omset": 1721641.0, "eksp": 360359.0, "hpp": 0.0, "codtf": 2082000.0, "delivered": 15, "retur": 3, "ongoing": 0, "hilang": 0}}, "2026-06-14": {"B": {"qty": 36.0, "omset": 3310882.0, "eksp": 639118.0, "hpp": 0.0, "codtf": 3950000.0, "delivered": 23, "retur": 4, "ongoing": 0, "hilang": 0}, "N": {"qty": 29.0, "omset": 2842648.0, "eksp": 606352.0, "hpp": 0.0, "codtf": 3449000.0, "delivered": 27, "retur": 1, "ongoing": 0, "hilang": 0}}, "2026-06-15": {"B": {"qty": 34.0, "omset": 3123105.0, "eksp": 775895.0, "hpp": 0.0, "codtf": 3899000.0, "delivered": 25, "retur": 5, "ongoing": 0, "hilang": 0}, "N": {"qty": 23.0, "omset": 2369251.0, "eksp": 435749.0, "hpp": 0.0, "codtf": 2805000.0, "delivered": 16, "retur": 5, "ongoing": 0, "hilang": 0}}, "2026-06-16": {"B": {"qty": 30.0, "omset": 2762366.0, "eksp": 724634.0, "hpp": 0.0, "codtf": 3487000.0, "delivered": 25, "retur": 3, "ongoing": 0, "hilang": 0}, "N": {"qty": 43.0, "omset": 4226575.0, "eksp": 881425.0, "hpp": 0.0, "codtf": 5108000.0, "delivered": 27, "retur": 12, "ongoing": 0, "hilang": 0}}, "2026-06-17": {"B": {"qty": 36.0, "omset": 3350161.0, "eksp": 800839.0, "hpp": 0.0, "codtf": 4151000.0, "delivered": 29, "retur": 4, "ongoing": 0, "hilang": 0}, "N": {"qty": 30.0, "omset": 2978803.0, "eksp": 606197.0, "hpp": 0.0, "codtf": 3585000.0, "delivered": 22, "retur": 6, "ongoing": 1, "hilang": 0}}, "2026-06-18": {"B": {"qty": 32.0, "omset": 2916332.0, "eksp": 779668.0, "hpp": 0.0, "codtf": 3696000.0, "delivered": 30, "retur": 1, "ongoing": 0, "hilang": 0}, "N": {"qty": 39.0, "omset": 3834738.0, "eksp": 764262.0, "hpp": 0.0, "codtf": 4599000.0, "delivered": 32, "retur": 3, "ongoing": 0, "hilang": 0}}, "2026-06-19": {"B": {"qty": 50.0, "omset": 4596733.0, "eksp": 1030267.0, "hpp": 0.0, "codtf": 5627000.0, "delivered": 41, "retur": 3, "ongoing": 0, "hilang": 0}, "N": {"qty": 38.0, "omset": 3694701.0, "eksp": 752299.0, "hpp": 0.0, "codtf": 4447000.0, "delivered": 31, "retur": 3, "ongoing": 0, "hilang": 0}}, "2026-06-20": {"B": {"qty": 38.0, "omset": 3512769.0, "eksp": 718231.0, "hpp": 0.0, "codtf": 4231000.0, "delivered": 29, "retur": 3, "ongoing": 0, "hilang": 0}, "N": {"qty": 35.0, "omset": 3627168.0, "eksp": 662832.0, "hpp": 0.0, "codtf": 4290000.0, "delivered": 25, "retur": 6, "ongoing": 0, "hilang": 0}}, "2026-06-21": {"B": {"qty": 36.0, "omset": 3241328.0, "eksp": 674672.0, "hpp": 0.0, "codtf": 3916000.0, "delivered": 23, "retur": 6, "ongoing": 0, "hilang": 0}, "N": {"qty": 33.0, "omset": 3249921.0, "eksp": 748079.0, "hpp": 0.0, "codtf": 3998000.0, "delivered": 27, "retur": 3, "ongoing": 0, "hilang": 0}}, "2026-06-22": {"B": {"qty": 37.0, "omset": 3396972.0, "eksp": 855028.0, "hpp": 0.0, "codtf": 4252000.0, "delivered": 28, "retur": 3, "ongoing": 0, "hilang": 0}, "N": {"qty": 32.0, "omset": 2990409.0, "eksp": 793591.0, "hpp": 0.0, "codtf": 3784000.0, "delivered": 27, "retur": 4, "ongoing": 0, "hilang": 0}}, "2026-06-23": {"B": {"qty": 32.0, "omset": 2972788.0, "eksp": 701212.0, "hpp": 0.0, "codtf": 3674000.0, "delivered": 24, "retur": 5, "ongoing": 0, "hilang": 0}, "N": {"qty": 44.0, "omset": 4081028.0, "eksp": 940972.0, "hpp": 0.0, "codtf": 5022000.0, "delivered": 36, "retur": 3, "ongoing": 0, "hilang": 0}}, "2026-06-24": {"B": {"qty": 36.0, "omset": 3274493.0, "eksp": 682507.0, "hpp": 0.0, "codtf": 3957000.0, "delivered": 23, "retur": 6, "ongoing": 0, "hilang": 0}, "N": {"qty": 31.0, "omset": 2804632.0, "eksp": 670368.0, "hpp": 0.0, "codtf": 3475000.0, "delivered": 24, "retur": 5, "ongoing": 0, "hilang": 0}}, "2026-06-25": {"B": {"qty": 35.0, "omset": 3185718.0, "eksp": 749282.0, "hpp": 0.0, "codtf": 3935000.0, "delivered": 22, "retur": 8, "ongoing": 0, "hilang": 0}, "N": {"qty": 48.0, "omset": 4471426.0, "eksp": 845574.0, "hpp": 0.0, "codtf": 5317000.0, "delivered": 38, "retur": 4, "ongoing": 0, "hilang": 0}}, "2026-06-26": {"B": {"qty": 38.0, "omset": 3506043.0, "eksp": 709957.0, "hpp": 0.0, "codtf": 4216000.0, "delivered": 30, "retur": 4, "ongoing": 0, "hilang": 0}, "N": {"qty": 31.0, "omset": 2842582.0, "eksp": 735418.0, "hpp": 0.0, "codtf": 3578000.0, "delivered": 24, "retur": 5, "ongoing": 0, "hilang": 0}}, "2026-06-27": {"B": {"qty": 30.0, "omset": 2753491.0, "eksp": 763509.0, "hpp": 0.0, "codtf": 3517000.0, "delivered": 22, "retur": 6, "ongoing": 0, "hilang": 0}, "N": {"qty": 28.0, "omset": 2637136.0, "eksp": 614864.0, "hpp": 0.0, "codtf": 3252000.0, "delivered": 23, "retur": 4, "ongoing": 0, "hilang": 0}}, "2026-06-28": {"B": {"qty": 25.0, "omset": 2276480.0, "eksp": 504520.0, "hpp": 0.0, "codtf": 2781000.0, "delivered": 14, "retur": 6, "ongoing": 0, "hilang": 0}, "N": {"qty": 33.0, "omset": 3009046.0, "eksp": 647954.0, "hpp": 0.0, "codtf": 3657000.0, "delivered": 26, "retur": 5, "ongoing": 0, "hilang": 0}}, "2026-06-29": {"B": {"qty": 37.0, "omset": 3522265.0, "eksp": 788735.0, "hpp": 0.0, "codtf": 4311000.0, "delivered": 30, "retur": 5, "ongoing": 0, "hilang": 0}, "N": {"qty": 48.0, "omset": 4522881.0, "eksp": 972119.0, "hpp": 0.0, "codtf": 5495000.0, "delivered": 40, "retur": 7, "ongoing": 0, "hilang": 0}}, "2026-06-30": {"B": {"qty": 44.0, "omset": 4049569.0, "eksp": 842431.0, "hpp": 0.0, "codtf": 4892000.0, "delivered": 31, "retur": 7, "ongoing": 0, "hilang": 0}, "N": {"qty": 51.0, "omset": 4852593.0, "eksp": 1039607.0, "hpp": 0.0, "codtf": 5892200.0, "delivered": 42, "retur": 8, "ongoing": 0, "hilang": 0}}, "2026-07-01": {"B": {"qty": 47.0, "omset": 4313985.400000001, "eksp": 1082014.6000000003, "hpp": 578100.0, "codtf": 5396000.0, "delivered": 33, "retur": 10, "ongoing": 0, "hilang": 0}, "N": {"qty": 53.0, "omset": 5132268.199999999, "eksp": 1115731.7999999998, "hpp": 1092300.0, "codtf": 6248000.0, "delivered": 43, "retur": 6, "ongoing": 2, "hilang": 0}}, "2026-07-02": {"B": {"qty": 27.0, "omset": 2461384.1999999997, "eksp": 436615.8, "hpp": 332100.0, "codtf": 2898000.0, "delivered": 19, "retur": 3, "ongoing": 0, "hilang": 0}, "N": {"qty": 58.0, "omset": 5596837.199999999, "eksp": 1321162.7999999996, "hpp": 1209800.0, "codtf": 6918000.0, "delivered": 39, "retur": 13, "ongoing": 0, "hilang": 0}}, "2026-07-03": {"B": {"qty": 34.0, "omset": 3139079.1000000006, "eksp": 709920.9000000001, "hpp": 12300.0, "codtf": 3849000.0, "delivered": 26, "retur": 8, "ongoing": 0, "hilang": 0}, "N": {"qty": 57.0, "omset": 5386853.0, "eksp": 1068147.0000000002, "hpp": 1157900.0, "codtf": 6455000.0, "delivered": 42, "retur": 9, "ongoing": 0, "hilang": 0}}, "2026-07-04": {"B": {"qty": 19.0, "omset": 1753778.6999999997, "eksp": 419221.29999999993, "hpp": 233700.0, "codtf": 2173000.0, "delivered": 15, "retur": 3, "ongoing": 0, "hilang": 0}, "N": {"qty": 38.0, "omset": 3551653.0, "eksp": 717347.0, "hpp": 750500.0, "codtf": 4269000.0, "delivered": 31, "retur": 1, "ongoing": 0, "hilang": 0}}, "2026-07-05": {"B": {"qty": 49.0, "omset": 4538501.6, "eksp": 1095498.4, "hpp": 602700.0, "codtf": 5634000.0, "delivered": 36, "retur": 6, "ongoing": 0, "hilang": 0}, "N": {"qty": 61.0, "omset": 5841530.999999999, "eksp": 1218469.0, "hpp": 1265050.0, "codtf": 7060000.0, "delivered": 48, "retur": 9, "ongoing": 1, "hilang": 0}}, "2026-07-06": {"B": {"qty": 48.0, "omset": 4342974.800000001, "eksp": 839025.2000000002, "hpp": 590400.0, "codtf": 5182000.0, "delivered": 34, "retur": 7, "ongoing": 0, "hilang": 0}, "N": {"qty": 79.0, "omset": 7356811.799999998, "eksp": 1565188.1999999997, "hpp": 1592400.0, "codtf": 8922000.0, "delivered": 56, "retur": 13, "ongoing": 0, "hilang": 0}}, "2026-07-07": {"B": {"qty": 38.0, "omset": 3213113.600000002, "eksp": 910886.4000000005, "hpp": 467400.0, "codtf": 4124000.0, "delivered": 30, "retur": 5, "ongoing": 0, "hilang": 0}, "N": {"qty": 91.0, "omset": 8085559.599999995, "eksp": 2018440.3999999985, "hpp": 1855150.0, "codtf": 10104000.0, "delivered": 68, "retur": 11, "ongoing": 0, "hilang": 0}}, "2026-07-08": {"B": {"qty": 32.0, "omset": 2837738.7, "eksp": 595261.3, "hpp": 393200.0, "codtf": 3433000.0, "delivered": 18, "retur": 5, "ongoing": 0, "hilang": 0}, "N": {"qty": 58.0, "omset": 5463566.5, "eksp": 1225433.5, "hpp": 1187050.0, "codtf": 6689000.0, "delivered": 38, "retur": 15, "ongoing": 0, "hilang": 0}}, "2026-07-09": {"B": {"qty": 43.0, "omset": 3901578.500000001, "eksp": 943421.5000000002, "hpp": 528500.0, "codtf": 4845000.0, "delivered": 35, "retur": 5, "ongoing": 0, "hilang": 0}, "N": {"qty": 50.0, "omset": 4398952.77, "eksp": 1100347.23, "hpp": 987500.0, "codtf": 5499300.0, "delivered": 38, "retur": 11, "ongoing": 0, "hilang": 0}}, "2026-07-10": {"B": {"qty": 31.0, "omset": 2779386.7, "eksp": 496613.30000000005, "hpp": 381300.0, "codtf": 3276000.0, "delivered": 21, "retur": 4, "ongoing": 0, "hilang": 0}, "N": {"qty": 41.0, "omset": 3762480.3000000007, "eksp": 884519.7000000002, "hpp": 822250.0, "codtf": 4647000.0, "delivered": 27, "retur": 11, "ongoing": 1, "hilang": 0}}, "2026-07-11": {"B": {"qty": 33.0, "omset": 3074728.1999999997, "eksp": 582271.7999999999, "hpp": 405900.0, "codtf": 3657000.0, "delivered": 24, "retur": 4, "ongoing": 0, "hilang": 0}, "N": {"qty": 48.0, "omset": 4442382.699999999, "eksp": 970617.2999999999, "hpp": 953875.0, "codtf": 5413000.0, "delivered": 28, "retur": 12, "ongoing": 1, "hilang": 0}}, "2026-07-12": {"B": {"qty": 31.0, "omset": 2874483.8000000003, "eksp": 747516.2000000001, "hpp": 381300.0, "codtf": 3622000.0, "delivered": 24, "retur": 5, "ongoing": 0, "hilang": 0}, "N": {"qty": 56.0, "omset": 5177007.600000001, "eksp": 1189992.4, "hpp": 1115400.0, "codtf": 6367000.0, "delivered": 47, "retur": 4, "ongoing": 1, "hilang": 0}}, "2026-07-13": {"B": {"qty": 45.0, "omset": 4110443.4000000013, "eksp": 916556.6000000002, "hpp": 553500.0, "codtf": 5027000.0, "delivered": 33, "retur": 7, "ongoing": 0, "hilang": 0}, "N": {"qty": 45.0, "omset": 4249281.3, "eksp": 942718.7000000001, "hpp": 903400.0, "codtf": 5192000.0, "delivered": 39, "retur": 2, "ongoing": 0, "hilang": 0}}, "2026-07-14": {"B": {"qty": 42.0, "omset": 3911169.8000000007, "eksp": 800830.2000000002, "hpp": 524050.0, "codtf": 4712000.0, "delivered": 34, "retur": 4, "ongoing": 0, "hilang": 0}, "N": {"qty": 54.0, "omset": 5004280.500000001, "eksp": 1070719.5, "hpp": 1103550.0, "codtf": 6075000.0, "delivered": 41, "retur": 11, "ongoing": 0, "hilang": 0}}, "2026-07-15": {"B": {"qty": 30.0, "omset": 2668431.1, "eksp": 599568.9, "hpp": 369000.0, "codtf": 3268000.0, "delivered": 25, "retur": 2, "ongoing": 0, "hilang": 0}, "N": {"qty": 45.0, "omset": 4135143.0000000005, "eksp": 934857.0000000001, "hpp": 888750.0, "codtf": 5070000.0, "delivered": 37, "retur": 6, "ongoing": 0, "hilang": 0}}, "2026-07-16": {"B": {"qty": 38.0, "omset": 3509377.3700000006, "eksp": 765622.6300000001, "hpp": 467400.0, "codtf": 4275000.0, "delivered": 27, "retur": 4, "ongoing": 2, "hilang": 0}, "N": {"qty": 47.0, "omset": 4544934.610000001, "eksp": 969155.3900000004, "hpp": 1003025.0, "codtf": 5514090.0, "delivered": 40, "retur": 5, "ongoing": 0, "hilang": 0}}, "2026-07-17": {"B": {"qty": 34.0, "omset": 3017508.1000000006, "eksp": 681491.9, "hpp": 418200.0, "codtf": 3699000.0, "delivered": 23, "retur": 2, "ongoing": 2, "hilang": 0}, "N": {"qty": 36.0, "omset": 3193427.7000000007, "eksp": 769572.3000000002, "hpp": 711000.0, "codtf": 3963000.0, "delivered": 27, "retur": 6, "ongoing": 1, "hilang": 0}}, "2026-07-18": {"B": {"qty": 21.0, "omset": 1907888.9, "eksp": 423111.0999999999, "hpp": 258300.0, "codtf": 2331000.0, "delivered": 16, "retur": 1, "ongoing": 3, "hilang": 0}, "N": {"qty": 61.0, "omset": 5628937.300000001, "eksp": 1225062.7000000004, "hpp": 1214150.0, "codtf": 6854000.0, "delivered": 46, "retur": 5, "ongoing": 5, "hilang": 0}}, "2026-07-19": {"B": {"qty": 26.0, "omset": 2399054.6, "eksp": 584945.4, "hpp": 319800.0, "codtf": 2984000.0, "delivered": 16, "retur": 6, "ongoing": 4, "hilang": 0}, "N": {"qty": 45.0, "omset": 4418306.9, "eksp": 867693.1000000002, "hpp": 898150.0, "codtf": 5286000.0, "delivered": 35, "retur": 3, "ongoing": 3, "hilang": 0}}, "2026-07-20": {"B": {"qty": 39.0, "omset": 3269439.8000000007, "eksp": 892560.2000000002, "hpp": 479700.0, "codtf": 4162000.0, "delivered": 22, "retur": 5, "ongoing": 7, "hilang": 0}, "N": {"qty": 61.0, "omset": 5031577.699999999, "eksp": 1590422.2999999993, "hpp": 1202300.0, "codtf": 6622000.0, "delivered": 49, "retur": 4, "ongoing": 4, "hilang": 0}}, "2026-07-21": {"B": {"qty": 37.0, "omset": 3174335.200000001, "eksp": 743664.8000000003, "hpp": 455100.0, "codtf": 3918000.0, "delivered": 28, "retur": 2, "ongoing": 5, "hilang": 0}, "N": {"qty": 66.0, "omset": 5619892.8, "eksp": 1602107.1999999995, "hpp": 1350300.0, "codtf": 7222000.0, "delivered": 40, "retur": 6, "ongoing": 15, "hilang": 0}}, "2026-07-22": {"B": {"qty": 49.0, "omset": 3890736.800000002, "eksp": 1261263.1999999997, "hpp": 602700.0, "codtf": 5152000.0, "delivered": 25, "retur": 1, "ongoing": 21, "hilang": 0}, "N": {"qty": 56.0, "omset": 5001037.300000001, "eksp": 1185962.7000000002, "hpp": 1170300.0, "codtf": 6187000.0, "delivered": 37, "retur": 2, "ongoing": 14, "hilang": 0}}, "2026-07-23": {"B": {"qty": 28.0, "omset": 2218362.900000001, "eksp": 652637.1000000002, "hpp": 344400.0, "codtf": 2871000.0, "delivered": 18, "retur": 0, "ongoing": 10, "hilang": 0}, "N": {"qty": 63.0, "omset": 5547472.2, "eksp": 1290527.8, "hpp": 1285800.0, "codtf": 6838000.0, "delivered": 28, "retur": 0, "ongoing": 28, "hilang": 0}}, "2026-07-24": {"B": {"qty": 36.0, "omset": 2912238.500000001, "eksp": 812761.5000000003, "hpp": 442800.0, "codtf": 3725000.0, "delivered": 15, "retur": 0, "ongoing": 18, "hilang": 0}, "N": {"qty": 49.0, "omset": 4018479.0000000014, "eksp": 1031521.0000000003, "hpp": 1041450.0, "codtf": 5050000.0, "delivered": 16, "retur": 1, "ongoing": 29, "hilang": 0}}, "2026-07-25": {"B": {"qty": 31.0, "omset": 2614554.9, "eksp": 846445.1000000001, "hpp": 381300.0, "codtf": 3461000.0, "delivered": 0, "retur": 0, "ongoing": 27, "hilang": 0}, "N": {"qty": 37.0, "omset": 3262808.5000000005, "eksp": 732191.5000000001, "hpp": 727600.0, "codtf": 3995000.0, "delivered": 2, "retur": 0, "ongoing": 30, "hilang": 0}}, "2026-07-26": {"B": {"qty": 31.0, "omset": 2835714.4999999995, "eksp": 719285.5, "hpp": 381300.0, "codtf": 3555000.0, "delivered": 5, "retur": 0, "ongoing": 25, "hilang": 0}, "N": {"qty": 30.0, "omset": 2779512.4, "eksp": 686487.6, "hpp": 577600.0, "codtf": 3466000.0, "delivered": 2, "retur": 0, "ongoing": 27, "hilang": 0}}, "2026-07-27": {"B": {"qty": 36.0, "omset": 3330085.0, "eksp": 749915.0, "hpp": 442800.0, "codtf": 4080000.0, "delivered": 0, "retur": 0, "ongoing": 34, "hilang": 0}, "N": {"qty": 50.0, "omset": 4511083.800000001, "eksp": 1110916.2000000002, "hpp": 1004750.0, "codtf": 5622000.0, "delivered": 0, "retur": 0, "ongoing": 47, "hilang": 0}}, "2026-07-28": {"B": {"qty": 37.0, "omset": 3392767.5000000005, "eksp": 762232.5, "hpp": 455100.0, "codtf": 4155000.0, "delivered": 0, "retur": 0, "ongoing": 34, "hilang": 0}, "N": {"qty": 61.0, "omset": 5195232.199999999, "eksp": 1472767.7999999998, "hpp": 1145150.0, "codtf": 6668000.0, "delivered": 0, "retur": 0, "ongoing": 55, "hilang": 0}}};
+</script>
+<script>
+// ---------- State ----------
+let level = 'YEAR';     // YEAR | MONTH | DAY-LIST(within month)
+let currentYear = null;
+let currentMonth = null; // 1-12
+let brandFilter = 'ALL';
+
+const MONTH_ID = ["", "Jan","Feb","Mar","Apr","Mei","Jun","Jul","Agu","Sep","Okt","Nov","Des"];
+const MONTH_FULL = ["", "Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
+const IDR = n => 'Rp' + Math.round(n).toLocaleString('id-ID');
+const NUM = n => Math.round(n).toLocaleString('id-ID');
+
+// derive year list
+const allDates = Object.keys(RAW_DAILY).sort();
+const years = [...new Set(allDates.map(d => d.slice(0,4)))];
+currentYear = years[years.length-1];
+
+function emptyMetrics(){
+  return {qty:0, omset:0, eksp:0, hpp:0, codtf:0, delivered:0, retur:0, ongoing:0, hilang:0};
+}
+function addMetrics(a,b){
+  for(const k in a) a[k]+=b[k]||0;
+}
+function combineBrands(dayObj){
+  // returns metrics according to brandFilter
+  if(brandFilter==='ALL'){
+    const m = emptyMetrics();
+    addMetrics(m, dayObj.B); addMetrics(m, dayObj.N);
+    return m;
+  }
+  return dayObj[brandFilter] || emptyMetrics();
+}
+
+function marginOf(m){ return m.omset - m.eksp - m.hpp; }
+function pct(a,b){ return b>0 ? (a/b*100) : 0; }
+
+// ---------- Aggregations ----------
+function monthsOfYear(year){
+  return [...new Set(allDates.filter(d=>d.startsWith(year)).map(d=>d.slice(5,7)))].sort();
+}
+function daysOfMonth(year, month){
+  return allDates.filter(d=>d.startsWith(year+'-'+month)).sort();
+}
+function aggregateDates(dateList){
+  const m = emptyMetrics();
+  dateList.forEach(d=>addMetrics(m, combineBrands(RAW_DAILY[d])));
+  return m;
+}
+function aggregateBrandFor(dateList, brand){
+  const m = emptyMetrics();
+  dateList.forEach(d=>addMetrics(m, RAW_DAILY[d][brand] || emptyMetrics()));
+  return m;
+}
+
+// ---------- Renderers ----------
+function renderCrumbs(){
+  const el = document.getElementById('crumbs');
+  let html = `<span class="seg ${level==='YEAR'?'current':''}" onclick="goYear()">Tahun ${currentYear}</span>`;
+  if(level==='MONTH' || level==='DAY-LIST'){
+    html += `<span class="sep">/</span><span class="seg ${level==='MONTH'?'current':''}" onclick="goMonthList()">Bulanan</span>`;
+  }
+  if(level==='DAY-LIST'){
+    html += `<span class="sep">/</span><span class="seg current">${MONTH_FULL[parseInt(currentMonth)]} ${currentYear}</span>`;
+  }
+  el.innerHTML = html;
+}
+
+function renderKpis(metrics, contextLabel){
+  const el = document.getElementById('kpiRow');
+  const margin = marginOf(metrics);
+  const totalStatus = metrics.delivered+metrics.retur+metrics.ongoing+metrics.hilang;
+  el.innerHTML = `
+    <div class="kpi"><div class="label">Qty Terjual</div><div class="value">${NUM(metrics.qty)}</div><div class="sub">${contextLabel}</div></div>
+    <div class="kpi"><div class="label">Omset</div><div class="value">${IDR(metrics.omset)}</div><div class="sub">COD/TF ${IDR(metrics.codtf)}</div></div>
+    <div class="kpi margin"><div class="label">Est. Margin</div><div class="value">${IDR(margin)}</div><div class="sub">Eksp ${IDR(metrics.eksp)} · HPP ${IDR(metrics.hpp)}</div></div>
+    <div class="kpi delivered"><div class="label">Delivered</div><div class="value">${pct(metrics.delivered,totalStatus).toFixed(1)}%</div><div class="sub">${NUM(metrics.delivered)} paket</div></div>
+    <div class="kpi retur"><div class="label">Retur</div><div class="value">${pct(metrics.retur,totalStatus).toFixed(1)}%</div><div class="sub">${NUM(metrics.retur)} paket</div></div>
+  `;
+}
+
+function renderGauges(dateList){
+  const el = document.getElementById('gaugeRow');
+  const bm = aggregateBrandFor(dateList, 'B');
+  const nm = aggregateBrandFor(dateList, 'N');
+  const bTotal = bm.delivered+bm.retur+bm.ongoing+bm.hilang;
+  const nTotal = nm.delivered+nm.retur+nm.ongoing+nm.hilang;
+  const bPct = pct(bm.delivered, bTotal);
+  const nPct = pct(nm.delivered, nTotal);
+  el.innerHTML = `
+    <div class="gauge-card booster">
+      <div class="bottle"><div class="fill" style="height:${bPct}%"></div></div>
+      <div class="gauge-info">
+        <div class="name">BOOSTER</div>
+        <div class="pct">${bPct.toFixed(1)}%</div>
+        <div class="desc">tingkat delivered dari ${NUM(bTotal)} paket · omset ${IDR(bm.omset)}</div>
+      </div>
+    </div>
+    <div class="gauge-card nutritan">
+      <div class="bottle"><div class="fill" style="height:${nPct}%"></div></div>
+      <div class="gauge-info">
+        <div class="name">NUTRITAN</div>
+        <div class="pct">${nPct.toFixed(1)}%</div>
+        <div class="desc">tingkat delivered dari ${NUM(nTotal)} paket · omset ${IDR(nm.omset)}</div>
+      </div>
+    </div>
+  `;
+}
+
+let chartInstance = null;
+function renderChart(labels, values, subLabel){
+  document.getElementById('chartSub').textContent = subLabel;
+  const ctx = document.getElementById('trendChart').getContext('2d');
+  if(chartInstance) chartInstance.destroy();
+  chartInstance = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        data: values,
+        backgroundColor: brandFilter==='N' ? '#F2A65A' : '#6FCF7C',
+        borderRadius: 6,
+        maxBarThickness: 42,
+      }]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false},
+        tooltip:{ callbacks:{ label: (c)=> IDR(c.raw) } } },
+      scales:{
+        x:{ grid:{display:false}, ticks:{ color:'#8FA398', font:{family:'JetBrains Mono', size:11} } },
+        y:{ grid:{color:'#22302A'}, ticks:{ color:'#8FA398', font:{family:'JetBrains Mono', size:10},
+            callback: v => (v/1000000).toFixed(1)+'jt' } }
+      }
+    }
+  });
+}
+
+function renderDrillYear(){
+  document.getElementById('drillTitle').textContent = 'Bulanan';
+  const months = monthsOfYear(currentYear);
+  const el = document.getElementById('drillBody');
+  let html = '<div class="cards-grid">';
+  months.forEach(mo=>{
+    const dates = daysOfMonth(currentYear, mo);
+    const m = aggregateDates(dates);
+    const bm = aggregateBrandFor(dates,'B'), nm = aggregateBrandFor(dates,'N');
+    const totalOmset = bm.omset+nm.omset;
+    const bShare = totalOmset>0 ? (bm.omset/totalOmset*100):0;
+    html += `<div class="period-card" onclick="goMonth('${mo}')">
+      <div class="p-label">${MONTH_ID[parseInt(mo)]} ${currentYear}</div>
+      <div class="p-omset">${IDR(m.omset)}</div>
+      <div class="p-meta">${NUM(m.qty)} pcs terjual</div>
+      <div class="p-bar"><div class="b" style="width:${bShare}%"></div><div class="n" style="width:${100-bShare}%"></div></div>
+    </div>`;
+  });
+  html += '</div>';
+  el.innerHTML = html;
+}
+
+function renderDrillMonth(){
+  document.getElementById('drillTitle').textContent = `Harian — ${MONTH_FULL[parseInt(currentMonth)]} ${currentYear}`;
+  const dates = daysOfMonth(currentYear, currentMonth);
+  const el = document.getElementById('drillBody');
+  let rows = '';
+  dates.forEach(d=>{
+    const m = combineBrands(RAW_DAILY[d]);
+    const day = d.slice(8,10);
+    const totalStatus = m.delivered+m.retur+m.ongoing+m.hilang;
+    rows += `<tr>
+      <td>${day} ${MONTH_ID[parseInt(currentMonth)]}</td>
+      <td>${NUM(m.qty)}</td>
+      <td>${IDR(m.omset)}</td>
+      <td>${IDR(m.eksp)}</td>
+      <td>${IDR(marginOf(m))}</td>
+      <td>${NUM(m.delivered)}</td>
+      <td>${NUM(m.retur)}</td>
+      <td>${pct(m.delivered,totalStatus).toFixed(0)}%</td>
+    </tr>`;
+  });
+  el.innerHTML = `<table>
+    <thead><tr><th>Tanggal</th><th>Qty</th><th>Omset</th><th>Eksp.</th><th>Margin</th><th>Delvd</th><th>Retur</th><th>% Del</th></tr></thead>
+    <tbody>${rows || '<tr><td colspan="8" class="empty">Tidak ada data</td></tr>'}</tbody>
+  </table>`;
+}
+
+function render(){
+  renderCrumbs();
+  if(level==='YEAR' || level==='MONTH'){
+    const dates = allDates.filter(d=>d.startsWith(currentYear));
+    renderKpis(aggregateDates(dates), `Tahun ${currentYear}`);
+    renderGauges(dates);
+    const months = monthsOfYear(currentYear);
+    const values = months.map(mo => combineBrands.call(null) , 0);
+    const labels = months.map(mo=>MONTH_ID[parseInt(mo)]);
+    const vals = months.map(mo=> aggregateDates(daysOfMonth(currentYear,mo)).omset );
+    renderChart(labels, vals, 'per bulan, tahun '+currentYear);
+    renderDrillYear();
+  } else if(level==='DAY-LIST'){
+    const dates = daysOfMonth(currentYear, currentMonth);
+    renderKpis(aggregateDates(dates), `${MONTH_FULL[parseInt(currentMonth)]} ${currentYear}`);
+    renderGauges(dates);
+    const labels = dates.map(d=>d.slice(8,10));
+    const vals = dates.map(d=> combineBrands(RAW_DAILY[d]).omset );
+    renderChart(labels, vals, 'per hari, '+MONTH_FULL[parseInt(currentMonth)]+' '+currentYear);
+    renderDrillMonth();
+  }
+}
+
+function goYear(){ level='YEAR'; render(); }
+function goMonthList(){ level='YEAR'; render(); }
+function goMonth(mo){ currentMonth=mo; level='DAY-LIST'; render(); }
+
+document.getElementById('brandFilter').addEventListener('click', (e)=>{
+  const btn = e.target.closest('.filter-btn');
+  if(!btn) return;
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  brandFilter = btn.dataset.brand;
+  render();
+});
+
+render();
+</script>
+</body>
+</html>
